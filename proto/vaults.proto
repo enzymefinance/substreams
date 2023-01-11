@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package enzyme.vaults.v1;
+
+message VaultList {
+  repeated bytes vaults = 1;
+}
+
+message Vaults {
+  repeated Vault vaults = 1;
+}
+
+message Vault {
+  uint64 ordinal = 1;
+  bytes vault = 2;
+  string name = 3;
+  string symbol = 4;
+}
+
+message VaultShareTransfer {
+  uint64 ordinal = 1;
+  bytes vault = 2;
+  bytes from = 3;
+  bytes to = 4;
+  string shares = 5;
+}
+
+message VaultShareTransfers {
+  repeated VaultShareTransfer transfers = 1;
+}

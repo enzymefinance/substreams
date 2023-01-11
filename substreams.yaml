@@ -1,0 +1,41 @@
+specVersion: v0.1.0
+package:
+  name: "enzyme"
+  version: v0.1.0
+
+protobuf:
+  files:
+    - vaults.proto
+  importPaths:
+    - ./proto
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../target/wasm32-unknown-unknown/release/vaults.wasm
+
+modules:
+  - name: map_vault_creations
+    kind: map
+    initialBlock: 11681281
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    output:
+      type: proto:enzyme.vaults.v1.Vaults
+
+  - name: map_vault_share_transfers
+    kind: map
+    initialBlock: 11681299
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+      - store: store_vault_proxies
+    output:
+      type: proto:enzyme.vaults.v1.VaultShareTransfers
+
+  - name: store_vault_proxies
+    kind: store
+    initialBlock: 11681281
+    updatePolicy: set
+    valueType: string
+    inputs:
+      - map: map_vault_creations
