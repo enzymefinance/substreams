@@ -10,16 +10,13 @@ use substreams::prelude::*;
 use substreams::Hex;
 use substreams_ethereum::pb::eth;
 use substreams_ethereum::pb::eth::rpc::RpcCall;
-use substreams_ethereum::Event;
-
-substreams_ethereum::init!();
 
 const DISPATCHER_CONTRACT: [u8; 20] = hex!("c3dc853dd716bd5754f421ef94fdcbac3902ab32");
 
 #[substreams::handlers::map]
 fn map_vault_creations(blk: eth::v2::Block) -> Result<vaults::Vaults, substreams::errors::Error> {
     let vaults = blk
-        .events::<dispatcher::events::VaultProxyDeployed>(&[&DISPATCHER_CONTRACT])
+        .events_at::<dispatcher::events::VaultProxyDeployed>(&[&DISPATCHER_CONTRACT])
         .map(|(event, log)| {
             let vault = event.vault_proxy;
             let calls = vec![
@@ -34,12 +31,15 @@ fn map_vault_creations(blk: eth::v2::Block) -> Result<vaults::Vaults, substreams
             ];
 
             let results = fetch_many(calls);
-            let name = read_string(&results[0]).expect("failed to read name");
-            let symbol = read_string(&results[1]).expect("failed to read symbol");
+            let name = erc20::functions::Name::output(&results[0]).expect("failed to read name");
+            let symbol = erc20::functions::Symbol::output(&results[1]).expect("failed to read symbol");
 
             Ok(vaults::Vault {
                 ordinal: log.ordinal(),
-                vault,
+                block: blk.number,
+                timestamp: blk.timestamp_seconds(),
+                transaction: Hex::encode(log.receipt.transaction.to_owned().hash),
+                vault: Hex::encode(vault),
                 name,
                 symbol,
             })
@@ -52,7 +52,7 @@ fn map_vault_creations(blk: eth::v2::Block) -> Result<vaults::Vaults, substreams
 #[substreams::handlers::store]
 fn store_vault_proxies(vaults: vaults::Vaults, output: StoreSetString) {
     for vault in vaults.vaults {
-        output.set(vault.ordinal, Hex::encode(vault.vault), &"");
+        output.set(vault.ordinal, vault.vault, &"");
     }
 }
 
@@ -62,23 +62,50 @@ fn map_vault_share_transfers(
     store: StoreGetString,
 ) -> Result<vaults::VaultShareTransfers, substreams::errors::Error> {
     let transfers = blk
-        .logs()
-        .filter_map(|log| {
-            store
-                .get_at(log.ordinal(), Hex::encode(log.address()))
-                .and_then(|_| {
-                    erc20::events::Transfer::match_and_decode(log).and_then(|event| {
-                        Some(vaults::VaultShareTransfer {
-                            ordinal: log.ordinal(),
-                            vault: log.address().to_owned(),
-                            from: event.from,
-                            to: event.to,
-                            shares: event.value.to_string(),
-                        })
-                    })
-                })
+        .events::<erc20::events::Transfer>()
+        .filter_map(|(event, log)| {
+            // Look for any transfers of a vault's shares.
+            let filter = store.get_at(log.ordinal(), Hex::encode(log.address()));
+
+            filter.map(|_| vaults::VaultShareTransfer {
+                block: blk.number,
+                timestamp: blk.timestamp_seconds(),
+                transaction: Hex::encode(log.receipt.transaction.to_owned().hash),
+                vault: Hex::encode(log.address()),
+                from: Hex::encode(event.from),
+                to: Hex::encode(event.to),
+                amount: event.value.to_string(),
+            })
         })
         .collect();
 
     Ok(vaults::VaultShareTransfers { transfers })
+}
+
+#[substreams::handlers::map]
+fn map_vault_asset_transfers(
+    blk: eth::v2::Block,
+    store: StoreGetString,
+) -> Result<vaults::VaultAssetTransfers, substreams::errors::Error> {
+    let transfers = blk
+        .events::<erc20::events::Transfer>()
+        .filter_map(|(event, log)| {
+            // Look for any transfers of any asset to or from a vault's portfolio.
+            let filter = store
+                .get_at(log.ordinal(), Hex::encode(event.to.to_owned()))
+                .or_else(|| store.get_at(log.ordinal(), Hex::encode(event.from.to_owned())));
+
+            filter.map(|_| vaults::VaultAssetTransfer {
+                block: blk.number,
+                timestamp: blk.timestamp_seconds(),
+                transaction: Hex::encode(log.receipt.transaction.to_owned().hash),
+                asset: Hex::encode(log.address()),
+                from: Hex::encode(event.from.to_owned()),
+                to: Hex::encode(event.to.to_owned()),
+                amount: event.value.to_string(),
+            })
+        })
+        .collect();
+
+    Ok(vaults::VaultAssetTransfers { transfers })
 }

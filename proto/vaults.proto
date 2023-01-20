@@ -2,29 +2,44 @@ syntax = "proto3";
 
 package enzyme.vaults.v1;
 
-message VaultList {
-  repeated bytes vaults = 1;
-}
-
 message Vaults {
   repeated Vault vaults = 1;
 }
 
 message Vault {
   uint64 ordinal = 1;
-  bytes vault = 2;
-  string name = 3;
-  string symbol = 4;
+  uint64 block = 2;
+  uint64 timestamp = 3;
+  string transaction = 4;
+  string vault = 5;
+  string name = 6;
+  string symbol = 7;
 }
 
 message VaultShareTransfer {
-  uint64 ordinal = 1;
-  bytes vault = 2;
-  bytes from = 3;
-  bytes to = 4;
-  string shares = 5;
+  string vault = 1;
+  uint64 block = 2;
+  uint64 timestamp = 3;
+  string transaction = 4;
+  string from = 5;
+  string to = 6;
+  string amount = 7;
 }
 
 message VaultShareTransfers {
   repeated VaultShareTransfer transfers = 1;
+}
+
+message VaultAssetTransfer {
+  string asset = 1;
+  uint64 block = 2;
+  uint64 timestamp = 3;
+  string transaction = 4;
+  string from = 5;
+  string to = 6;
+  string amount = 7;
+}
+
+message VaultAssetTransfers {
+  repeated VaultAssetTransfer transfers = 1;
 }

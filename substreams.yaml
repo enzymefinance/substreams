@@ -23,15 +23,6 @@ modules:
     output:
       type: proto:enzyme.vaults.v1.Vaults
 
-  - name: map_vault_share_transfers
-    kind: map
-    initialBlock: 11681299
-    inputs:
-      - source: sf.ethereum.type.v2.Block
-      - store: store_vault_proxies
-    output:
-      type: proto:enzyme.vaults.v1.VaultShareTransfers
-
   - name: store_vault_proxies
     kind: store
     initialBlock: 11681281
@@ -39,3 +30,21 @@ modules:
     valueType: string
     inputs:
       - map: map_vault_creations
+
+  - name: map_vault_share_transfers
+    kind: map
+    initialBlock: 11681281
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+      - store: store_vault_proxies
+    output:
+      type: proto:enzyme.vaults.v1.VaultShareTransfers
+
+  - name: map_vault_asset_transfers
+    kind: map
+    initialBlock: 11681281
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+      - store: store_vault_proxies
+    output:
+      type: proto:enzyme.vaults.v1.VaultAssetTransfers

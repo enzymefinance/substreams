@@ -16,4 +16,4 @@ codegen:
 
 .PHONY: package
 package: build
-	substreams package substreams.yaml
+	substreams pack substreams.yaml

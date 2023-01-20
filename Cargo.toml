@@ -11,8 +11,9 @@ name = "vaults"
 crate-type = ["cdylib"]
 
 [dependencies]
-ethabi = "17"
+ethabi = "18"
 hex-literal = "0.3.4"
+num-bigint = "0.4.3"
 prost = "0.11"
 substreams.workspace = true
 substreams-ethereum.workspace = true
